@@ -1,12 +1,14 @@
 package guru.bug.gonwayish.model;
 
+import java.util.Set;
+
 /**
  * @author Dimitrijs Fedotovs <a href="http://www.bug.guru">www.bug.guru</a>
  * @version 1.0
  * @since 1.0
  */
 public class Cell implements Runnable {
-    private static final long LIFE_PERIOD = 20000; // milliseconds
+    private static final long LIFE_PERIOD = 1000; // milliseconds
     private final Field field;
     private final Position position;
     private double size;
@@ -19,6 +21,7 @@ public class Cell implements Runnable {
 
         if (initialAlive) {
             birthtime = System.currentTimeMillis();
+            size = 1;
         } else {
             birthtime = -1;
         }
@@ -37,17 +40,35 @@ public class Cell implements Runnable {
         while (field.isRunning()) {
             pause();
             long cur = System.currentTimeMillis();
-            long age = cur - birthtime;
 
+            Set<Cell> around = field.findAround(position);
+            long liveCount = around.stream()
+                    .map(Cell::getCellInfo)
+                    .filter(CellInfo::isAlive)
+                    .count();
+
+            if (birthtime == -1 && liveCount == 3){
+                updateCellInfo(System.currentTimeMillis(), 1);
+            }
+
+            if (birthtime != -1 && (liveCount == 2 || liveCount == 3)) {
+                updateCellInfo(System.currentTimeMillis(), 1);
+            }
+
+            if (birthtime != -1 && (liveCount < 2 || liveCount > 3)) {
+                updateCellInfo(-1, 0);
+            }
+
+            long age = cur - birthtime;
             if (age > LIFE_PERIOD) {
                 System.out.println("Cell " + position + " is too old");
                 updateCellInfo(-1, 0);
-                break;
+                //break;
             }
-
-            double p = (age - LIFE_PERIOD / 2.0) / LIFE_PERIOD * Math.PI;
-            double s = Math.cos(p);
-            setSize(s);
+//
+//            double p = (age - LIFE_PERIOD / 2.0) / LIFE_PERIOD * Math.PI;
+//            double s = Math.cos(p);
+//            setSize(s);
         }
         System.out.println("Cell " + position + " finished");
     }
