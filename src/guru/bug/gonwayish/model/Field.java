@@ -1,5 +1,7 @@
 package guru.bug.gonwayish.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -55,16 +57,37 @@ public class Field {
         return running;
     }
 
-    public Set<Cell> findAround(Position pos) {
-        return pos.around().stream()
-                .map(fieldMap::get)
-                .peek(Cell::lock)
-                .collect(Collectors.toSet());
-    }
+//    public Set<Cell> findAround(Position pos) {
+//        return pos.around().stream()
+//                .map(fieldMap::get)
+//                .peek(Cell::lock)
+//                .collect(Collectors.toSet());
+//    }
 
     public void releaseAround(Position pos) {
         pos.around().stream()
                 .map(fieldMap::get)
                 .peek(Cell::unlock);
     }
+
+     public List<Cell> findAroundAndTryLock(Position pos) {
+         List<Cell> result = new ArrayList<>(8);
+         boolean lockFailed = false;
+         for (Position p : pos.around()) {
+             Cell c = fieldMap.get(p);
+             if (c.tryLock()) {
+                 result.add(c);
+             } else {
+                 lockFailed = true;
+                 break;
+             }
+         }
+         if (lockFailed) {
+             result.forEach(Cell::unlock);
+             return null;
+         } else {
+             return result;
+         }
+     }
+
 }
