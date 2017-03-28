@@ -31,23 +31,24 @@ public class Field {
         if (running) {
             throw new IllegalStateException("Already running");
         }
-        setRunning(true);
         fieldMap = Position.all().stream()
                 .map(p -> {
                     boolean alive = initState.apply(p);
                     Cell result = new Cell(this, p, alive);
-                    executor.submit(result);
+                    executor.execute(result);
                     return result;
                 })
                 .collect(Collectors.toMap(Cell::getPosition, Function.identity()));
+        setRunning(true);
     }
 
     public void stop() {
         setRunning(false);
     }
 
-    private void setRunning(boolean running) {
+    private synchronized void setRunning(boolean running) {
         this.running = running;
+        this.notifyAll();
     }
 
     public synchronized boolean isRunning() {
@@ -57,6 +58,13 @@ public class Field {
     public Set<Cell> findAround(Position pos) {
         return pos.around().stream()
                 .map(fieldMap::get)
+                .peek(Cell::lock)
                 .collect(Collectors.toSet());
+    }
+
+    public void releaseAround(Position pos) {
+        pos.around().stream()
+                .map(fieldMap::get)
+                .peek(Cell::unlock);
     }
 }
